@@ -47,13 +47,6 @@ function Dashboard({ refreshTrigger }) {
 
 }
 
-const cardStyle = {
-  padding: "20px",
-  border: "1px solid #ccc",
-  borderRadius: "10px",
-  width: "200px",
-  textAlign: "center",
-  boxShadow: "2px 2px 10px rgba(0,0,0,0.1)"
-};
+
 
 export default Dashboard;
