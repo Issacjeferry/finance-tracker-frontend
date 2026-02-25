@@ -44,7 +44,7 @@ function TransactionList() {
   window.location.href = "/login";
 };
   return (
-    <div className="table-container">
+    <div className="table-wrapper">
     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
   <h2 style={{ margin: 0 }}>Dashboard</h2>
   <button className="logout-btn" onClick={handleLogout}>
