@@ -1,70 +1,111 @@
-# Getting Started with Create React App
+# Personal Finance Tracker - Modern Web Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A responsive personal finance and wealth management dashboard built with **React**, featuring real-time financial analytics, pure SVG data visualization charts, hardened session management, and **Google OAuth 2.0** authentication.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Key Features
 
-### `npm start`
+- **Visual Financial Analytics**:
+  - **4 Hero Metric Cards**: Real-time Total Income, Total Expenses, Net Balance, and Savings Rate target indicator.
+  - **Category Expense Donut Chart**: Lightweight, pure SVG responsive donut chart showing category distribution with percentage breakdowns and an interactive legend.
+  - **Cash Flow & Liquidity Bar**: Proportional comparison bar comparing income vs. expenses with net liquidity badge.
+- **Transaction Management**:
+  - Instant live search by title or notes.
+  - Quick filter pills (**All**, **Expenses**, **Income**).
+  - Category dropdown filter.
+  - Multi-attribute sorting (Date newest/oldest, Amount high/low).
+  - Safe delete confirmation modal preventing accidental data loss.
+- **Production-Ready Authentication**:
+  - **Google OAuth 2.0**: Integrated `@react-oauth/google` with Google Identity Services for 1-click passwordless login.
+  - **Email & Password**: Clean forms with validation and show/hide password toggles.
+  - **Smart Session Validation**: [ProtectedRoute.js](src/components/ProtectedRoute.js) decodes JWT expiration timestamps and actively checks `/auth/me` on mount.
+  - **Global 401/403 Interceptor**: Automatically purges stale tokens and redirects expired sessions to login.
+- **Modern UI & Toast Feedback**:
+  - Non-intrusive floating toast notifications (Success, Error, Warning, Info).
+  - Glassmorphic navigation header and modern typography using *Plus Jakarta Sans*.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Tech Stack
 
-### `npm test`
+| Technology | Purpose |
+| :--- | :--- |
+| **React 19** | Core UI Component Architecture |
+| **React Router v7** | Client-Side Routing & Protected Routes |
+| **Axios** | HTTP Client with Request/Response Interceptors |
+| **@react-oauth/google** | Google Identity Services (GIS) Sign-In |
+| **Lucide React** | Modern Vector Iconography |
+| **Vanilla CSS** | Custom Design System, Glassmorphic Tokens, Responsive Grid |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Project Structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+src/
+├── api.js                           # Centralized Axios client with JWT & 401/403 auto-logout
+├── App.js                           # Top-level router, providers & routes
+├── components/
+│   ├── Auth/
+│   │   └── GoogleSignInButton.js   # Google OAuth button with fallback hints
+│   ├── Charts/
+│   │   ├── CashFlowChart.js        # Pure SVG income vs expense comparison bar
+│   │   └── CategoryExpenseChart.js # Pure SVG interactive donut chart
+│   ├── Toast/
+│   │   └── ToastContext.js         # Lightweight toast notification provider
+│   ├── Dashboard.js                # Hero metric cards & chart container
+│   ├── ProtectedRoute.js           # Active session validator & redirect guard
+│   ├── TransactionForm.js          # Add / edit transaction modal
+│   └── TransactionList.js          # Main page with search, filters, table & header
+├── pages/
+│   ├── Login.js                    # Email & Google login page
+│   └── Register.js                 # Registration page
+├── services/
+│   └── transactionService.js       # Transaction CRUD & unified summary API
+├── index.css                        # Design system & resets
+└── style.css                        # Complete theme, cards, forms & animations
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Environment Configuration
 
-### `npm run eject`
+Copy `.env.example` to `.env`:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+cp .env.example .env
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Configure your variables in `.env`:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```env
+# Backend API URL (defaults to localhost:8080 in development)
+REACT_APP_API_BASE_URL=http://localhost:8080
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Optional Google OAuth 2.0 Client ID (from Google Cloud Console)
+REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+```
 
-## Learn More
+> **Note**: In Google Cloud Console under *Authorized JavaScript origins*, make sure to add `http://localhost:3000` and `http://localhost`.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Getting Started Locally
 
-### Code Splitting
+### 1. Install Dependencies
+```bash
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 2. Start the Development Server
+```bash
+npm start
+```
+The application will open in your browser at `http://localhost:3000`.
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### 3. Build for Production
+```bash
+npm run build
+```
+Creates an optimized production bundle in the `build/` folder.
