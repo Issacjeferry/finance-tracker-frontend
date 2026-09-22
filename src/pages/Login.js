@@ -1,60 +1,19 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import API from "../api";
 
 function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const handleSubmit = async (event) => {
+    event.preventDefault(); setLoading(true); setError("");
+    try { const response = await API.post("/auth/login", form); localStorage.setItem("token", response.data.token); navigate("/"); }
+    catch (err) { setError("Those details didn’t match an account."); }
+    finally { setLoading(false); }
   };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      const res = await axios.post(
-        "https://finance-tracker-backend-j2il.onrender.com/auth/login",
-        form
-      );
-
-      localStorage.setItem("token", res.data.token);
-      navigate("/");
-    } catch (err) {
-      alert("Invalid credentials");
-    }
-  };
-
-  return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h2>Welcome Back</h2>
-        <p className="auth-sub">Login to continue</p>
-
-        <form onSubmit={handleSubmit}>
-          <input
-            name="email"
-            placeholder="Email"
-            onChange={handleChange}
-            required
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            onChange={handleChange}
-            required
-          />
-          <button type="submit">Login</button>
-        </form>
-
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Register</Link>
-        </p>
-      </div>
-    </div>
-  );
+  return <div className="auth-container"><div className="auth-card"><div className="brand-mark">₹</div><p className="eyebrow">PERSONAL FINANCE</p><h1>Welcome back</h1><p className="auth-sub">Your financial overview is waiting for you.</p><form onSubmit={handleSubmit}><label>Email<input name="email" type="email" autoComplete="email" placeholder="you@example.com" value={form.email} onChange={handleChange} required /></label><label>Password<input name="password" type="password" autoComplete="current-password" placeholder="Enter your password" value={form.password} onChange={handleChange} required /></label>{error && <div className="form-error" role="alert">{error}</div>}<button className="primary-btn" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</button></form><p className="auth-link">New here? <Link to="/register">Create an account</Link></p></div></div>;
 }
-
 export default Login;

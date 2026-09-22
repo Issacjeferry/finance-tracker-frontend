@@ -1,52 +1,41 @@
-import React, { useEffect, useState } from "react";
-import {
-  getIncome,
-  getExpense,
-  getBalance
-} from "../services/transactionService";
+import React from "react";
 
-function Dashboard({ refreshTrigger }) {
-  const [income, setIncome] = useState(0);
-  const [expense, setExpense] = useState(0);
-  const [balance, setBalance] = useState(0);
+const money = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2
+});
 
-  useEffect(() => {
-    fetchSummary();
-  }, [refreshTrigger]);
-
-  const fetchSummary = async () => {
-    const incomeRes = await getIncome();
-    const expenseRes = await getExpense();
-    const balanceRes = await getBalance();
-
-    setIncome(incomeRes.data);
-    setExpense(expenseRes.data);
-    setBalance(balanceRes.data);
-  };
+function Dashboard({ transactions }) {
+  const income = transactions
+    .filter((transaction) => transaction.type === "INCOME")
+    .reduce((total, transaction) => total + Number(transaction.amount || 0), 0);
+  const expense = transactions
+    .filter((transaction) => transaction.type === "EXPENSE")
+    .reduce((total, transaction) => total + Number(transaction.amount || 0), 0);
+  const balance = income - expense;
 
   return (
-  <div className="dashboard">
-    <div className="card">
-      <h3>Total Income</h3>
-      <p className="income">₹ {income}</p>
-    </div>
-
-    <div className="card">
-      <h3>Total Expense</h3>
-      <p className="expense">₹ {expense}</p>
-    </div>
-
-    <div className="card">
-      <h3>Balance</h3>
-      <p className={balance >= 0 ? "balance-positive" : "balance-negative"}>
-        ₹ {balance}
-      </p>
-    </div>
-  </div>
-);
-
+    <section className="dashboard" aria-label="Financial summary">
+      <div className="card income-card">
+        <span className="card-label">Total income</span>
+        <strong className="income">{money.format(income)}</strong>
+        <span className="card-hint">Money coming in</span>
+      </div>
+      <div className="card expense-card">
+        <span className="card-label">Total expenses</span>
+        <strong className="expense">{money.format(expense)}</strong>
+        <span className="card-hint">Money going out</span>
+      </div>
+      <div className="card balance-card">
+        <span className="card-label">Current balance</span>
+        <strong className={balance >= 0 ? "balance-positive" : "balance-negative"}>
+          {money.format(balance)}
+        </strong>
+        <span className="card-hint">Your net position</span>
+      </div>
+    </section>
+  );
 }
-
-
 
 export default Dashboard;
