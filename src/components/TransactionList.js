@@ -1,96 +1,370 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { deleteTransaction, getTransactions } from "../services/transactionService";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { getTransactions, deleteTransaction } from "../services/transactionService";
 import TransactionForm from "./TransactionForm";
 import Dashboard from "./Dashboard";
-
-const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" });
+import { useToast } from "./Toast/ToastContext";
+import {
+  Plus,
+  Search,
+  Filter,
+  ArrowUpDown,
+  Edit2,
+  Trash2,
+  LogOut,
+  User as UserIcon,
+  AlertTriangle,
+  Receipt,
+} from "lucide-react";
 
 function TransactionList() {
   const [transactions, setTransactions] = useState([]);
+  const [refreshFlag, setRefreshFlag] = useState(false);
   const [editData, setEditData] = useState(null);
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  const fetchTransactions = async () => {
+  // Search & Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("ALL");
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [sortBy, setSortBy] = useState("DATE_DESC");
+
+  const toast = useToast();
+
+  // Current logged in user info
+  const user = useMemo(() => {
     try {
-      setError("");
+      return JSON.parse(localStorage.getItem("user")) || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
       const response = await getTransactions();
-      setTransactions(Array.isArray(response.data) ? response.data : []);
+      setTransactions(response.data || []);
     } catch (err) {
-      setError("We couldn’t load your transactions. Please try again.");
+      console.error("Failed to load transactions", err);
+      if (err.response?.status !== 401 && err.response?.status !== 403 && err.response?.status !== 404) {
+        toast.error("Failed to load transactions. Check your connection.");
+      }
     } finally {
       setLoading(false);
     }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  const refreshAll = () => {
+    fetchTransactions();
+    setRefreshFlag((prev) => !prev);
   };
 
-  useEffect(() => { fetchTransactions(); }, []);
-
-  const filteredTransactions = useMemo(() => transactions.filter((transaction) => {
-    const text = `${transaction.title} ${transaction.category} ${transaction.description || ""}`.toLowerCase();
-    return text.includes(query.toLowerCase()) && (typeFilter === "ALL" || transaction.type === typeFilter);
-  }), [transactions, query, typeFilter]);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this transaction?")) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteTransaction(id);
-      setTransactions((current) => current.filter((transaction) => transaction.id !== id));
-      if (editData?.id === id) setEditData(null);
+      await deleteTransaction(deleteTarget.id);
+      toast.success(`Deleted "${deleteTarget.title}"`);
+      setDeleteTarget(null);
+      refreshAll();
     } catch (err) {
-      setError("That transaction could not be deleted. Please try again.");
+      toast.error("Failed to delete transaction");
     }
+  };
+
+  const handleEdit = (transaction) => {
+    setEditData(transaction);
+    setIsFormOpen(true);
+  };
+
+  const clearEdit = () => {
+    setEditData(null);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.assign("/login");
+    localStorage.removeItem("user");
+    sessionStorage.setItem("auth_expired_message", "You have been logged out successfully.");
+    window.location.href = "/login";
   };
 
+  // Categories list extracted from transactions for dropdown
+  const categoriesList = useMemo(() => {
+    const set = new Set();
+    transactions.forEach((t) => {
+      if (t.category) set.add(t.category);
+    });
+    return Array.from(set);
+  }, [transactions]);
+
+  // Filtered and sorted transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter((t) => {
+        // Search filter
+        const matchSearch =
+          (t.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (t.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (t.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Type filter
+        const matchType =
+          filterType === "ALL" || (t.type || "").toUpperCase() === filterType;
+
+        // Category filter
+        const matchCategory =
+          selectedCategory === "ALL" || t.category === selectedCategory;
+
+        return matchSearch && matchType && matchCategory;
+      })
+      .sort((a, b) => {
+        if (sortBy === "DATE_DESC") {
+          return new Date(b.date) - new Date(a.date);
+        } else if (sortBy === "DATE_ASC") {
+          return new Date(a.date) - new Date(b.date);
+        } else if (sortBy === "AMOUNT_DESC") {
+          return Number(b.amount) - Number(a.amount);
+        } else if (sortBy === "AMOUNT_ASC") {
+          return Number(a.amount) - Number(b.amount);
+        }
+        return 0;
+      });
+  }, [transactions, searchTerm, filterType, selectedCategory, sortBy]);
+
   return (
-    <main className="dashboard-page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">YOUR MONEY, CLEARLY ORGANIZED</p>
-          <h1>Good to see you</h1>
-          <p className="page-subtitle">Track your income, spending, and progress in one calm workspace.</p>
+    <div className="main-content">
+      {/* Top Navigation Header */}
+      <header className="app-header">
+        <div className="header-brand">
+          <div className="brand-logo-badge">
+            <Receipt size={22} />
+          </div>
+          <div>
+            <h1 className="brand-title">FinanceTracker</h1>
+            <p className="brand-subtitle">Smart Wealth & Expense Management</p>
+          </div>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>Log out</button>
+
+        <div className="header-user-actions">
+          <div className="user-profile-chip">
+            {user?.pictureUrl ? (
+              <img src={user.pictureUrl} alt={user.name || "User"} className="user-avatar" />
+            ) : (
+              <div className="user-avatar-placeholder">
+                <UserIcon size={16} />
+              </div>
+            )}
+            <span className="user-name">{user?.name || user?.email || "My Account"}</span>
+          </div>
+
+          <button
+            className="btn-add-transaction"
+            onClick={() => {
+              clearEdit();
+              setIsFormOpen(true);
+            }}
+          >
+            <Plus size={16} /> Add Transaction
+          </button>
+
+          <button className="btn-logout" onClick={handleLogout} title="Sign Out">
+            <LogOut size={16} />
+          </button>
+        </div>
       </header>
 
-      <Dashboard transactions={transactions} />
-      <TransactionForm refresh={fetchTransactions} editData={editData} clearEdit={() => setEditData(null)} />
+      {/* Dashboard Metrics and Visual Charts */}
+      <Dashboard refreshTrigger={refreshFlag} transactions={transactions} />
 
-      <section className="table-container" aria-labelledby="transactions-heading">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">ACTIVITY</p>
-            <h2 id="transactions-heading">Transactions <span className="count-pill">{filteredTransactions.length}</span></h2>
+      {/* Transaction Management Section */}
+      <section className="transactions-section">
+        <div className="section-header">
+          <div className="section-title-wrap">
+            <h2>Transactions</h2>
+            <span className="count-pill">{filteredTransactions.length} records</span>
           </div>
-          <div className="filters" role="search">
-            <input aria-label="Search transactions" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search transactions" />
-            <select aria-label="Filter transaction type" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-              <option value="ALL">All types</option><option value="INCOME">Income</option><option value="EXPENSE">Expenses</option>
-            </select>
+
+          {/* Filter & Search Toolbar */}
+          <div className="toolbar-wrap">
+            <div className="search-box">
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-pills">
+              {["ALL", "EXPENSE", "INCOME"].map((type) => (
+                <button
+                  key={type}
+                  className={`pill-btn ${filterType === type ? "pill-active" : ""}`}
+                  onClick={() => setFilterType(type)}
+                >
+                  {type === "ALL" ? "All" : type === "EXPENSE" ? "Expenses" : "Income"}
+                </button>
+              ))}
+            </div>
+
+            {categoriesList.length > 0 && (
+              <div className="select-wrapper">
+                <Filter size={14} className="select-icon" />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="ALL">All Categories</option>
+                  {categoriesList.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="select-wrapper">
+              <ArrowUpDown size={14} className="select-icon" />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="DATE_DESC">Newest First</option>
+                <option value="DATE_ASC">Oldest First</option>
+                <option value="AMOUNT_DESC">Highest Amount</option>
+                <option value="AMOUNT_ASC">Lowest Amount</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {error && <div className="alert" role="alert">{error}<button onClick={fetchTransactions}>Retry</button></div>}
-        {loading ? <div className="empty-state"><span className="spinner" />Loading your transactions…</div> : filteredTransactions.length === 0 ? (
-          <div className="empty-state"><strong>{transactions.length ? "No matching transactions" : "No transactions yet"}</strong><span>{transactions.length ? "Try a different search or filter." : "Add your first transaction above to start seeing your financial picture."}</span></div>
-        ) : (
-          <div className="table-wrapper"><table><thead><tr><th>Transaction</th><th>Amount</th><th>Category</th><th>Type</th><th>Date</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
-            {filteredTransactions.map((transaction) => <tr key={transaction.id}>
-              <td><strong>{transaction.title}</strong>{transaction.description && <small>{transaction.description}</small>}</td>
-              <td className={transaction.type === "INCOME" ? "amount-income" : "amount-expense"}>{transaction.type === "INCOME" ? "+" : "−"}{money.format(Number(transaction.amount || 0))}</td>
-              <td><span className="category-chip">{transaction.category}</span></td><td><span className={`type-badge ${transaction.type.toLowerCase()}`}>{transaction.type.toLowerCase()}</span></td><td>{transaction.date}</td>
-              <td className="actions"><button className="action-btn" onClick={() => { setEditData(transaction); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button><button className="action-btn delete-btn" onClick={() => handleDelete(transaction.id)}>Delete</button></td>
-            </tr>)}
-          </tbody></table></div>
-        )}
+        {/* Transactions Table */}
+        <div className="table-card">
+          {loading ? (
+            <div className="table-loading">
+              <div className="shimmer-row" />
+              <div className="shimmer-row" />
+              <div className="shimmer-row" />
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="table-empty">
+              <Receipt size={40} className="empty-icon" />
+              <p>No transactions found</p>
+              <span>Try adjusting your search terms or filter selection</span>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Title & Notes</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th className="th-right">Amount</th>
+                    <th className="th-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTransactions.map((t) => {
+                    const isIncome = (t.type || "").toUpperCase() === "INCOME";
+                    return (
+                      <tr key={t.id} className="table-row">
+                        <td className="td-primary">
+                          <div className="title-text">{t.title}</div>
+                          {t.description && (
+                            <div className="notes-text">{t.description}</div>
+                          )}
+                        </td>
+                        <td>
+                          <span className="category-pill">{t.category || "General"}</span>
+                        </td>
+                        <td className="td-date">
+                          {t.date
+                            ? new Date(t.date).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </td>
+                        <td>
+                          <span className={`type-badge ${isIncome ? "badge-income" : "badge-expense"}`}>
+                            {isIncome ? "Income" : "Expense"}
+                          </span>
+                        </td>
+                        <td className={`td-right amount-text ${isIncome ? "text-income" : "text-expense"}`}>
+                          {isIncome ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN")}
+                        </td>
+                        <td className="td-center">
+                          <div className="action-buttons-group">
+                            <button
+                              className="icon-btn btn-edit"
+                              onClick={() => handleEdit(t)}
+                              title="Edit transaction"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            <button
+                              className="icon-btn btn-delete"
+                              onClick={() => setDeleteTarget(t)}
+                              title="Delete transaction"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
-    </main>
+
+      {/* Add / Edit Transaction Modal */}
+      <TransactionForm
+        refresh={refreshAll}
+        editData={editData}
+        clearEdit={clearEdit}
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false);
+          clearEdit();
+        }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon-wrap">
+              <AlertTriangle size={28} className="text-rose" />
+            </div>
+            <h3>Delete Transaction?</h3>
+            <p>
+              Are you sure you want to delete <strong>"{deleteTarget.title}"</strong> (₹
+              {Number(deleteTarget.amount).toLocaleString("en-IN")})? This action cannot be undone.
+            </p>
+            <div className="confirm-actions">
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button className="btn-danger" onClick={confirmDelete}>
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
+
 export default TransactionList;
