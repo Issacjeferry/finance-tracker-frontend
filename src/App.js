@@ -6,6 +6,7 @@ import TransactionList from "./components/TransactionList";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminDashboard from "./components/AdminDashboard";
 import "./style.css";
 
 const GOOGLE_CLIENT_ID =
@@ -28,6 +29,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

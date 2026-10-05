@@ -3,6 +3,7 @@ import { getSummary } from "../services/transactionService";
 import CashFlowChart from "./Charts/CashFlowChart";
 import CategoryExpenseChart from "./Charts/CategoryExpenseChart";
 import { TrendingUp, TrendingDown, Wallet, PiggyBank } from "lucide-react";
+import { calculateSavingsRate } from "../utils/finance";
 
 function Dashboard({ refreshTrigger, transactions = [] }) {
   const [summary, setSummary] = useState({
@@ -30,7 +31,7 @@ function Dashboard({ refreshTrigger, transactions = [] }) {
   }, [refreshTrigger, fetchSummary]);
 
   const { totalIncome, totalExpense, balance } = summary;
-  const savingsRate = totalIncome > 0 ? Math.max(0, ((totalIncome - totalExpense) / totalIncome) * 100) : 0;
+  const savingsRate = calculateSavingsRate(totalIncome, totalExpense);
 
   return (
     <div className="dashboard-section">

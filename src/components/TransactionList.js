@@ -2,6 +2,9 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { getTransactions, deleteTransaction } from "../services/transactionService";
 import TransactionForm from "./TransactionForm";
 import Dashboard from "./Dashboard";
+import PlanningWorkspace from "./PlanningWorkspace";
+import IntelligenceDashboard from "./IntelligenceDashboard";
+import { Link } from "react-router-dom";
 import { useToast } from "./Toast/ToastContext";
 import {
   Plus,
@@ -14,6 +17,11 @@ import {
   User as UserIcon,
   AlertTriangle,
   Receipt,
+  LayoutDashboard,
+  BrainCircuit,
+  Target,
+  ListChecks,
+  Shield,
 } from "lucide-react";
 
 function TransactionList() {
@@ -23,6 +31,7 @@ function TransactionList() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("overview");
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -178,11 +187,21 @@ function TransactionList() {
         </div>
       </header>
 
+      <nav className="workspace-tabs" aria-label="Finance workspace">
+        <button className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><LayoutDashboard size={16}/>Overview</button>
+        <button className={view === "transactions" ? "active" : ""} onClick={() => setView("transactions")}><ListChecks size={16}/>Transactions</button>
+        <button className={view === "intelligence" ? "active" : ""} onClick={() => setView("intelligence")}><BrainCircuit size={16}/>Intelligence</button>
+        <button className={view === "planning" ? "active" : ""} onClick={() => setView("planning")}><Target size={16}/>Planning</button>
+        {user?.role === "ADMIN" && <Link to="/admin"><Shield size={16}/>Admin</Link>}
+      </nav>
+
       {/* Dashboard Metrics and Visual Charts */}
-      <Dashboard refreshTrigger={refreshFlag} transactions={transactions} />
+      {view === "overview" && <Dashboard refreshTrigger={refreshFlag} transactions={transactions} />}
+      {view === "intelligence" && <IntelligenceDashboard />}
+      {view === "planning" && <PlanningWorkspace />}
 
       {/* Transaction Management Section */}
-      <section className="transactions-section">
+      {view === "transactions" && <section className="transactions-section">
         <div className="section-header">
           <div className="section-title-wrap">
             <h2>Transactions</h2>
@@ -326,7 +345,7 @@ function TransactionList() {
             </div>
           )}
         </div>
-      </section>
+      </section>}
 
       {/* Add / Edit Transaction Modal */}
       <TransactionForm
